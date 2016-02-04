@@ -12,21 +12,25 @@ warnings.filterwarnings("ignore")
 
 def main():
     np.random.seed(50)
-    r1,t1 = study("drug_net.txt")
+    name = "drug_net.txt"
+    #name = "Internet_hyperbolic_map/AS_ARK200906_topology.txt"
+    r1,t1 = study(name)
+    r2,t2 = study(name,theta_init = t1)
     print t1[:5]
-    r2,t2 = study("drug_net.txt",theta_init = t1)
     print t2[:5]
     graphe = nx.read_weighted_edgelist("drug_net.txt")
     graphe = nx.convert_node_labels_to_integers(graphe)
     degree = graphe.degree()
-    tdiff = math.pi - np.abs(math.pi - np.abs(t1 - t2))
+    tdiff = math.pi - np.abs(math.pi - np.abs(t1 - t2+np.mean(t2-t1)))
+    from numpy import cosh,sinh,cos,arccosh
+    distances = arccosh(cosh(r1)*cosh(r2)-sinh(r1)*sinh(r2)*cos(tdiff))
+    print distances
     degres = [1,2,3,4,5,6]
 
     diffavg = [np.average([tdiff[node] for node in degree if degree[node]==deg]) for deg in degres]
-    plt.plot(range(len(tdiff)),tdiff,degree.values(),'o')
+    #plt.plot(range(len(tdiff)),tdiff,degree.values(),'o')
+    plt.plot(np.arange(len(graphe)),distances,'o')
     plt.show()
-
-
 
 
 
@@ -49,16 +53,16 @@ def study(name,theta_init = None) :
     alpha, kappa0, kappaC, P0, k_bar = equations.solve(gamma, k_bar_obs, k_max_obs)
     # Verify equations
     #equations.verify(alpha, kappa0, kappaC, P0, k_bar, gamma, k_bar_obs, k_max_obs)
-    N = Nobs / (1 - P0)
-    print gamma, alpha, kappa0, kappaC, P0, k_bar, N
-    '''
+    #N = Nobs / (1 - P0)
+    #print gamma, alpha, kappa0, kappaC, P0, k_bar, N
+    """
     alpha = 0.58
     kappa0 = 0.9
     kappaC = 4790
     P0 = 0.33
     N = 35685
     k_bar = 9.86
-    '''
+    """
     # Estimating beta
     '''
     beta,path_followed = generate_networks.approximated_beta(N,k_bar,kappa0,gamma,C_obs,
@@ -68,16 +72,22 @@ def study(name,theta_init = None) :
     # Verify beta:
     # print path_followed
 
+
     beta = 1.02
+    #beta =1.45
     # Creating map:
     graphe = nx.convert_node_labels_to_integers(graphe)
     constants = kappa0,gamma,beta,Nobs,k_bar
+
+    r_opt = loglikelihood.rayon(graphe,constants)
+
     if theta_init is None : theta_init = 2*math.pi*np.random.randint(0,Nobs,Nobs)/Nobs
     theta_opt = loglikelihood.optimisation_likelihood(graphe,constants,theta_init=theta_init.copy())
     #theta_opt = loglikelihood.optimisation_complete_par_etapes_likelihood(graphe,[5,4,3,2,0],theta_init.copy(),constants)
-    r_opt = loglikelihood.rayon(graphe,constants)
-    #theta_opt = loglikelihood.optimisation_par_etapes_likelihood(graphe,[6,5,4,3,1],3,theta_init.copy(),constants)
-
+    #theta_opt = loglikelihood.optimisation_par_etapes_likelihood(graphe,"",14,theta_init.copy(),constants,method="core_number")
+    with open('test50.txt', 'w') as f:
+        f.write(str(theta_opt))
+    print "saved"
     return r_opt,theta_opt
 
     #Verify loglikelihood
